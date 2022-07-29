@@ -22,7 +22,7 @@ namespace Ganss.Excel
     /// <summary>
     /// Map objects to Excel files.
     /// </summary>
-    public class ExcelMapper
+    public partial class ExcelMapper
     {
         /// <summary>
         /// Gets or sets the <see cref="TypeMapper"/> factory.

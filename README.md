@@ -197,6 +197,51 @@ excel.AddMapping<Product>("Formula" p => p.Formula).AsFormula();
 
 ☝️ The string values of formula properties must not start with the `=` sign. So instead of `=A1+B1` set the property's value to `A1+B1`.
 
+## DataTable mapping
+
+You don't have to specify a mapping to static types, you can also fetch a collection of DataTable.
+
+```C#
+public enum OrderState
+{
+    [System.ComponentModel.Description("New Order")]
+    NewOrder = 1,
+    [System.ComponentModel.Description("Canceled")]
+    Canceled = 2,
+    [System.ComponentModel.Description("Completed")]
+    Completed = 3
+}
+
+var products = new DataTable("Order");
+
+products.Columns.AddRange(new[] {
+    new DataColumn("Id", typeof(int)),
+    new DataColumn("No", typeof(string)),
+    new DataColumn("CreationTime", typeof(DateTime)),
+    new DataColumn("State", typeof(int)) });
+var nowTime = DateTime.Now.Date;
+products.Rows.Add(1, "001", nowTime.AddDays(-1), 1);
+products.Rows.Add(2, "002", nowTime.AddHours(-1), 2);
+products.Rows.Add(3, "003", nowTime, 3);
+
+var file = "productssave.xlsx";
+var excelMapper = new ExcelMapper();
+excelMapper.Ignore(products.Columns, "Id");
+excelMapper.AddMapping(products.Columns, "order number", "No");
+excelMapper.AddMapping(DbType.DateTime, "creation time", "CreationTime");
+excelMapper.AddMapping(DbType.Int32, "order state value", "State");
+excelMapper.AddMapping(DbType.String, "order state text", "State")
+    .SetCellUsing((c, o) =>
+    {
+        var state = (OrderState)o;
+        Type type = typeof(OrderState);
+        MemberInfo member = type.GetMember(state.ToString()).FirstOrDefault();
+        var attr = member.GetCustomAttributes(typeof(System.ComponentModel.DescriptionAttribute), true).FirstOrDefault() as System.ComponentModel.DescriptionAttribute;
+        c.SetCellValue(attr.Description);
+    });
+excelMapper.Save(file, products, "Products");
+```
+
 ## Custom mapping
 
 If you have specific requirements for mapping between cells and objects, you can use custom conversion methods. Here, cells that contain the string "NULL" are mapped to null:
