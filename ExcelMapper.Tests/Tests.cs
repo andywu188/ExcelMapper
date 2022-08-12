@@ -1064,6 +1064,116 @@ namespace Ganss.Excel.Tests
         }
 
         [Test]
+        public void SaveDataTableTest()
+        {
+            var products = new System.Data.DataTable("Order");
+
+            products.Columns.AddRange(new[] {
+                new System.Data.DataColumn("Id", typeof(int)),
+                new System.Data.DataColumn("No", typeof(string)),
+                new System.Data.DataColumn("CreationTime", typeof(DateTime)),
+                new System.Data.DataColumn("State", typeof(int)) });
+            var nowTime = DateTime.Now.Date;
+            products.Rows.Add(1, "001", nowTime.AddDays(-1), 1);
+            products.Rows.Add(2, "002", nowTime.AddHours(-1), 2);
+            products.Rows.Add(3, "003", nowTime, 3);
+
+            var file = "productssave.xlsx";
+            var excelMapper = new ExcelMapper();
+
+            excelMapper.Saving += (s, e) =>
+            {
+                var cols = e.Sheet.GetRow(excelMapper.HeaderRowNumber).LastCellNum;
+
+                for (int i = 0; i < cols; i++)
+                    e.Sheet.AutoSizeColumn(i);
+            };
+
+            excelMapper.Save(file, products, "Products");
+
+            var productsFetched = new ExcelMapper(file).Fetch().ToList();
+
+            CollectionAssert.AreEqual(ExcelMapper.ConverterToDynamic(products), productsFetched);
+        }
+
+        public enum OrderState
+        {
+            [System.ComponentModel.Description("New Order")]
+            NewOrder = 1,
+            [System.ComponentModel.Description("Canceled")]
+            Canceled = 2,
+            [System.ComponentModel.Description("Completed")]
+            Completed = 3
+        }
+
+        [Test]
+        public void SaveDataTableAndReadXlsTest()
+        {
+            var products = new System.Data.DataTable("Order");
+
+            products.Columns.AddRange(new[] {
+                new System.Data.DataColumn("Id", typeof(int)),
+                new System.Data.DataColumn("No", typeof(string)),
+                new System.Data.DataColumn("CreationTime", typeof(DateTime)),
+                new System.Data.DataColumn("State", typeof(int)) });
+            var nowTime = DateTime.Now.Date;
+            products.Rows.Add(1, "001", nowTime.AddDays(-1), 1);
+            products.Rows.Add(2, "002", nowTime.AddHours(-1), 2);
+            products.Rows.Add(3, "003", nowTime, 3);
+            var file = "productssave.xlsx";
+            var excelMapper = new ExcelMapper();
+            excelMapper.Ignore(products.Columns, "Id");
+            excelMapper.AddMapping(products.Columns, "order number", "No");
+            excelMapper.AddMapping(products.Columns, "creation time", "CreationTime");
+            excelMapper.AddMapping(products.Columns, "order state value", "State");
+            excelMapper.AddMapping(products.Columns, "order state text", "State")
+                .SetCellUsing((c, o) =>
+                {
+                    var state = (OrderState)o;
+                    var wb = c.Sheet.Workbook;
+                    var cs = wb.CreateCellStyle();
+                    cs.FillPattern = FillPattern.SolidForeground;
+                    switch (state)
+                    {
+                        case OrderState.NewOrder:
+                            cs.FillForegroundColor = NPOI.HSSF.Util.HSSFColor.Green.Index;
+                            break;
+                        case OrderState.Canceled:
+                            cs.FillForegroundColor = NPOI.HSSF.Util.HSSFColor.Red.Index;
+                            break;
+                        case OrderState.Completed:
+                            cs.FillForegroundColor = NPOI.HSSF.Util.HSSFColor.Blue.Index;
+                            break;
+                    }
+                    c.CellStyle = cs;
+                    Type type = typeof(OrderState);
+                    System.Reflection.MemberInfo member = type.GetMember(state.ToString()).FirstOrDefault();
+                    var attr = member.GetCustomAttributes(typeof(System.ComponentModel.DescriptionAttribute), true).FirstOrDefault() as System.ComponentModel.DescriptionAttribute;
+                    c.SetCellValue(attr.Description);
+
+                });
+            excelMapper.Saving += (s, e) =>
+            {
+                var cols = e.Sheet.GetRow(excelMapper.HeaderRowNumber).LastCellNum;
+
+                for (int i = 0; i < cols; i++)
+                    e.Sheet.AutoSizeColumn(i);
+            };
+
+            excelMapper.Save(file, products, "Products");
+
+            var productsMapper = new ExcelMapper(file);
+            productsMapper.AddMapping(System.Data.DbType.String, "order number", "No");
+            productsMapper.AddMapping(System.Data.DbType.DateTime, "creation time", "CreationTime");
+            productsMapper.AddMapping(System.Data.DbType.Int32, "order state value", "State");
+            var productsFetched = productsMapper.FetchToDataTable();
+
+            Assert.AreEqual(products.Rows[0]["No"], productsFetched.Rows[0]["No"]);
+            Assert.AreEqual(products.Rows[0]["CreationTime"], productsFetched.Rows[0]["CreationTime"]);
+            Assert.AreEqual(products.Rows[0]["State"], productsFetched.Rows[0]["State"]);
+        }
+
+        [Test]
         public void SaveNoHeaderSaveTest()
         {
             var products = new List<ProductNoHeader>

@@ -135,7 +135,7 @@ namespace Ganss.Excel
             return typeMapper;
         }
 
-        const string IndexMapPropertyName = "__indexes__";
+        internal const string IndexMapPropertyName = "__indexes__";
 
         /// <summary>
         /// Creates an <see cref="ExpandoObject"/> object that includes type mapping information.
