@@ -36,5 +36,24 @@ namespace Ganss.Excel
             }
             return type;
         }
+
+        /// <summary>
+        /// convert to Nullable value
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public static object ConvertToNullable(this object value)
+        {
+            if (value == null)
+            {
+                return null;
+            }
+            Type type = value.GetType();
+            if (type.IsPrimitive || type.IsValueType)
+            {
+                return typeof(Nullable<>).MakeGenericType(type).GetConstructor(new Type[] { type }).Invoke(new object[] { value });
+            }
+            return value;
+        }
     }
 }

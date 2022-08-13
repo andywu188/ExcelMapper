@@ -53,6 +53,7 @@ namespace Ganss.Excel
         /// <param name="valueConverter">converter receiving property name and value</param>
         public void Save(Stream stream, DataTable dataTable, string sheetName, bool xlsx = true, Func<string, object, object> valueConverter = null)
         {
+            this.IgnoreNestedTypes = true;
             Save(stream, ConverterToDynamic(dataTable), sheetName, xlsx, valueConverter);
         }
 
@@ -153,7 +154,7 @@ namespace Ganss.Excel
             var columnInfo = typeMapper.ColumnsByName[excelColumnName].FirstOrDefault(ci => ci.Name == dataColumnName);
             if (columnInfo is null)
             {
-                columnInfo = new DynamicColumnInfo(dataColumnName, dataColumn.DataType);
+                columnInfo = new DynamicColumnInfo(dataColumnName, dataColumn.DataType.ConvertToNullableType());
                 typeMapper.ColumnsByName[excelColumnName].Add(columnInfo);
             }
 
@@ -184,7 +185,7 @@ namespace Ganss.Excel
             var columnInfo = typeMapper.ColumnsByIndex[idx].FirstOrDefault(ci => ci.Property.Name == dataColumnName);
             if (columnInfo is null)
             {
-                columnInfo = new DynamicColumnInfo(dataColumnName, dataColumn.DataType);
+                columnInfo = new DynamicColumnInfo(dataColumnName, dataColumn.DataType.ConvertToNullableType());
                 typeMapper.ColumnsByIndex[idx].Add(columnInfo);
             }
 
@@ -205,15 +206,17 @@ namespace Ganss.Excel
             }
             TypeMapper typeMapper = TypeMapperFactory.Create(typeof(ExpandoObject));
 
-            if (!typeMapper.ColumnsByName.ContainsKey(excelColumnName))
-                typeMapper.ColumnsByName.Add(excelColumnName, new List<ColumnInfo>());
-            if (dataColumnName != excelColumnName && typeMapper.ColumnsByName.ContainsKey(dataColumnName))
+            if (dataColumnName != excelColumnName && typeMapper.ColumnsByName.Keys.Any(n => n == dataColumnName))
                 typeMapper.ColumnsByName.Remove(dataColumnName);
+
+            if (!typeMapper.ColumnsByName.Keys.Any(n=>n == excelColumnName))
+                typeMapper.ColumnsByName.Add(excelColumnName, new List<ColumnInfo>());
 
             var columnInfo = typeMapper.ColumnsByName[excelColumnName].FirstOrDefault(ci => ci.Name == dataColumnName);
             if (columnInfo is null)
             {
-                columnInfo = new DynamicColumnInfo(dataColumnName, NetType2DbTypeMapping.Where(n => n.Value == colType).FirstOrDefault().Key);
+                var dataType = NetType2DbTypeMapping.Where(n => n.Value == colType).FirstOrDefault().Key;
+                columnInfo = new DynamicColumnInfo(dataColumnName, dataType.ConvertToNullableType());
                 typeMapper.ColumnsByName[excelColumnName].Add(columnInfo);
             }
 
@@ -243,7 +246,8 @@ namespace Ganss.Excel
             var columnInfo = typeMapper.ColumnsByIndex[idx].FirstOrDefault(ci => ci.Property.Name == dataColumnName);
             if (columnInfo is null)
             {
-                columnInfo = new DynamicColumnInfo(dataColumnName, NetType2DbTypeMapping.Where(n => n.Value == colType).FirstOrDefault().Key);
+                var dataType = NetType2DbTypeMapping.Where(n => n.Value == colType).FirstOrDefault().Key;
+                columnInfo = new DynamicColumnInfo(dataColumnName, dataType.ConvertToNullableType());
                 typeMapper.ColumnsByIndex[idx].Add(columnInfo);
             }
 
@@ -314,7 +318,7 @@ namespace Ganss.Excel
                 expando[TypeMapper.IndexMapPropertyName] = map;
                 foreach (DataColumn column in columns)
                 {
-                    expando[column.ColumnName] = row[column.ColumnName] == DBNull.Value ? null : row[column.ColumnName];
+                    expando[column.ColumnName] = row[column.ColumnName] == DBNull.Value ? null : row[column.ColumnName].ConvertToNullable();
                 }
                 list.Add(eo);
             }
@@ -329,7 +333,7 @@ namespace Ganss.Excel
             expando[TypeMapper.IndexMapPropertyName] = map;
             foreach (DataColumn column in columns)
             {
-                expando[column.ColumnName] = GetDefaultValue(column.DataType);
+                expando[column.ColumnName] = GetDefaultValue(column.DataType).ConvertToNullable();
             }
             return eo;
         }

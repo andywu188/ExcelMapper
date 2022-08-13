@@ -1067,16 +1067,20 @@ namespace Ganss.Excel.Tests
         public void SaveDataTableTest()
         {
             var products = new System.Data.DataTable("Order");
-
+            
             products.Columns.AddRange(new[] {
                 new System.Data.DataColumn("Id", typeof(int)),
+                new System.Data.DataColumn("ProductId", typeof(Guid)),
                 new System.Data.DataColumn("No", typeof(string)),
                 new System.Data.DataColumn("CreationTime", typeof(DateTime)),
-                new System.Data.DataColumn("State", typeof(int)) });
+                new System.Data.DataColumn("Price", typeof(decimal)),
+                new System.Data.DataColumn("State", typeof(int)),
+                new System.Data.DataColumn("IsDelete", typeof(bool)),
+                new System.Data.DataColumn("RowVersion", typeof(byte[])) });
             var nowTime = DateTime.Now.Date;
-            products.Rows.Add(1, "001", nowTime.AddDays(-1), 1);
-            products.Rows.Add(2, "002", nowTime.AddHours(-1), 2);
-            products.Rows.Add(3, "003", nowTime, 3);
+            products.Rows.Add(1, Guid.NewGuid(), "001",  nowTime.AddDays(-1), 100.01, 1, false, new byte[] { 65, 66, 67 });
+            products.Rows.Add(2,           null, "002", nowTime.AddHours(-1),   null, 2,  true,                   null);
+            products.Rows.Add(3, Guid.NewGuid(),  null,              nowTime, 999999, 3,  null, new byte[] { 68, 69, 70 });
 
             var file = "productssave.xlsx";
             var excelMapper = new ExcelMapper();
@@ -1089,11 +1093,43 @@ namespace Ganss.Excel.Tests
                     e.Sheet.AutoSizeColumn(i);
             };
 
-            excelMapper.Save(file, products, "Products");
+            excelMapper.Save(file, products, "Products", true, (fileName, value) =>
+            {
+                switch (fileName)
+                {
+                    case "RowVersion":
+                        return value is byte[] ? System.Text.Encoding.UTF8.GetString(value as byte[]) : null;
+                    default:
+                        return value;
+                }
+            });
 
-            var productsFetched = new ExcelMapper(file).Fetch().ToList();
+            var productsMapper = new ExcelMapper(file);
+            productsMapper.SkipBlankRows = false;
+            var productsFetched = productsMapper.Fetch(0, (columnName, value) =>
+            {
+                switch (columnName)
+                {
+                    case "ProductId":
+                        return value is string && !string.IsNullOrEmpty(value.ToString()) ? Guid.Parse(value.ToString()) : null;
+                    case "RowVersion":
+                        return value is string && !string.IsNullOrEmpty(value.ToString()) ? System.Text.Encoding.UTF8.GetBytes(value.ToString()) : null;
+                    default:
+                        return value;
+                }
+            }).ToList();
 
-            CollectionAssert.AreEqual(ExcelMapper.ConverterToDynamic(products), productsFetched);
+            var dynamicProducts = ExcelMapper.ConverterToDynamic(products);
+            for (int i = 0; i < productsFetched.Count; i++)
+            {
+                Assert.AreEqual(dynamicProducts[i].ProductId, productsFetched[i].ProductId);
+                Assert.AreEqual(dynamicProducts[i].No ?? string.Empty, productsFetched[i].No);
+                Assert.AreEqual(dynamicProducts[i].CreationTime, productsFetched[i].CreationTime);
+                Assert.AreEqual(dynamicProducts[i].Price ?? string.Empty, productsFetched[i].Price);
+                Assert.AreEqual(dynamicProducts[i].State, productsFetched[i].State);
+                Assert.AreEqual(dynamicProducts[i].IsDelete ?? string.Empty, productsFetched[i].IsDelete);
+                Assert.AreEqual(dynamicProducts[i].RowVersion, productsFetched[i].RowVersion);
+            }
         }
 
         public enum OrderState
@@ -1113,20 +1149,26 @@ namespace Ganss.Excel.Tests
 
             products.Columns.AddRange(new[] {
                 new System.Data.DataColumn("Id", typeof(int)),
+                new System.Data.DataColumn("ProductId", typeof(Guid)),
                 new System.Data.DataColumn("No", typeof(string)),
                 new System.Data.DataColumn("CreationTime", typeof(DateTime)),
-                new System.Data.DataColumn("State", typeof(int)) });
+                new System.Data.DataColumn("Price", typeof(decimal)),
+                new System.Data.DataColumn("State", typeof(int)),
+                new System.Data.DataColumn("IsDelete", typeof(bool)),
+                new System.Data.DataColumn("RowVersion", typeof(byte[])) });
             var nowTime = DateTime.Now.Date;
-            products.Rows.Add(1, "001", nowTime.AddDays(-1), 1);
-            products.Rows.Add(2, "002", nowTime.AddHours(-1), 2);
-            products.Rows.Add(3, "003", nowTime, 3);
+            products.Rows.Add(1, Guid.NewGuid(), "001",  nowTime.AddDays(-1), 100.01, 1, false, new byte[] { 65, 66, 67 });
+            products.Rows.Add(2,           null, "002", nowTime.AddHours(-1),   null, 2,  true,                   null);
+            products.Rows.Add(3, Guid.NewGuid(),  null,              nowTime, 999999, 3,  null, new byte[] { 68, 69, 70 });
             var file = "productssave.xlsx";
             var excelMapper = new ExcelMapper();
             excelMapper.Ignore(products.Columns, "Id");
+            excelMapper.AddMapping(products.Columns, "product id", "ProductId");
             excelMapper.AddMapping(products.Columns, "order number", "No");
-            excelMapper.AddMapping(products.Columns, "creation time", "CreationTime");
+            excelMapper.AddMapping(System.Data.DbType.DateTime, "creation time", "CreationTime");
+            excelMapper.AddMapping(System.Data.DbType.Decimal, "price", "Price");
             excelMapper.AddMapping(products.Columns, "order state value", "State");
-            excelMapper.AddMapping(products.Columns, "order state text", "State")
+            excelMapper.AddMapping(System.Data.DbType.String, "order state text", "State")
                 .SetCellUsing((c, o) =>
                 {
                     var state = (OrderState)o;
@@ -1152,6 +1194,8 @@ namespace Ganss.Excel.Tests
                     c.SetCellValue(attr.Description);
 
                 });
+            excelMapper.AddMapping(products.Columns, "is delete", "IsDelete");
+            excelMapper.AddMapping(products.Columns, "version", "RowVersion");
             excelMapper.Saving += (s, e) =>
             {
                 var cols = e.Sheet.GetRow(excelMapper.HeaderRowNumber).LastCellNum;
@@ -1160,17 +1204,48 @@ namespace Ganss.Excel.Tests
                     e.Sheet.AutoSizeColumn(i);
             };
 
-            excelMapper.Save(file, products, "Products");
+            excelMapper.Save(file, products, "Products", true, (columnName, value) =>
+            {
+                switch (columnName)
+                {
+                    case "RowVersion":
+                        return value is byte[]? System.Text.Encoding.UTF8.GetString(value as byte[]) : null;
+                    default:
+                        return value;
+                }
+            });
 
             var productsMapper = new ExcelMapper(file);
+            productsMapper.AddMapping(System.Data.DbType.Guid, "product id", "ProductId");
             productsMapper.AddMapping(System.Data.DbType.String, "order number", "No");
             productsMapper.AddMapping(System.Data.DbType.DateTime, "creation time", "CreationTime");
+            productsMapper.AddMapping(System.Data.DbType.Decimal, "price", "Price");
             productsMapper.AddMapping(System.Data.DbType.Int32, "order state value", "State");
-            var productsFetched = productsMapper.FetchToDataTable();
+            productsMapper.AddMapping(System.Data.DbType.Boolean, "is delete", "IsDelete");
+            productsMapper.AddMapping(System.Data.DbType.Binary, "version", "RowVersion");
+            var productsFetched = productsMapper.FetchToDataTable(0, (columnName, value) =>
+            {
+                switch (columnName)
+                {
+                    case "ProductId":
+                        return value is string && value != null ? Guid.Parse(value.ToString()) : null;
+                    case "RowVersion":
+                        return value is string && value != null ? System.Text.Encoding.UTF8.GetBytes(value.ToString()) : null;
+                    default:
+                        return value;
+                }
+            });
 
-            Assert.AreEqual(products.Rows[0]["No"], productsFetched.Rows[0]["No"]);
-            Assert.AreEqual(products.Rows[0]["CreationTime"], productsFetched.Rows[0]["CreationTime"]);
-            Assert.AreEqual(products.Rows[0]["State"], productsFetched.Rows[0]["State"]);
+            for (int i = 0; i < productsFetched.Rows.Count; i++)
+            {
+                Assert.AreEqual(products.Rows[i]["ProductId"], productsFetched.Rows[i]["ProductId"]);
+                Assert.AreEqual(products.Rows[i]["No"], productsFetched.Rows[i]["No"]);
+                Assert.AreEqual(products.Rows[i]["CreationTime"], productsFetched.Rows[i]["CreationTime"]);
+                Assert.AreEqual(products.Rows[i]["Price"], productsFetched.Rows[i]["Price"]);
+                Assert.AreEqual(products.Rows[i]["State"], productsFetched.Rows[i]["State"]);
+                Assert.AreEqual(products.Rows[i]["IsDelete"], productsFetched.Rows[i]["IsDelete"]);
+                Assert.AreEqual(products.Rows[i]["RowVersion"], productsFetched.Rows[i]["RowVersion"]);
+            }
         }
 
         [Test]
