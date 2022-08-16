@@ -135,9 +135,9 @@ namespace Ganss.Excel
         /// Adds a mapping from a excel column name to a data column.
         /// </summary>s
         /// <param name="cols">The cols that contains the col to map to.</param>
-        /// <param name="excelColumnName">Name of the column.</param>
+        /// <param name="headerText">excel header text.</param>
         /// <param name="dataColumnName">Name of the property.</param>
-        public ColumnInfo AddMapping(DataColumnCollection cols, string excelColumnName, string dataColumnName)
+        public ColumnInfo AddMapping(DataColumnCollection cols, string headerText, string dataColumnName)
         {
             if (TypeMapperFactory == DefaultTypeMapperFactory)
             {
@@ -146,18 +146,18 @@ namespace Ganss.Excel
             TypeMapper typeMapper = TypeMapperFactory.Create(ConverterToDynamic(cols));
             var dataColumn = cols[dataColumnName];
 
-            if (!typeMapper.ColumnsByName.ContainsKey(excelColumnName))
-                typeMapper.ColumnsByName.Add(excelColumnName, new List<ColumnInfo>());
-            if (dataColumnName != excelColumnName && typeMapper.ColumnsByName.ContainsKey(dataColumnName))
+            if (!typeMapper.ColumnsByName.ContainsKey(headerText))
+                typeMapper.ColumnsByName.Add(headerText, new List<ColumnInfo>());
+            if (dataColumnName != headerText && typeMapper.ColumnsByName.ContainsKey(dataColumnName))
                 typeMapper.ColumnsByName.Remove(dataColumnName);
 
-            var columnInfo = typeMapper.ColumnsByName[excelColumnName].FirstOrDefault(ci => ci.Name == dataColumnName);
+            var columnInfo = typeMapper.ColumnsByName[headerText].FirstOrDefault(ci => ci.Name == dataColumnName);
             if (columnInfo is null)
             {
                 columnInfo = new DynamicColumnInfo(dataColumnName, dataColumn.DataType.ConvertToNullableType());
-                typeMapper.ColumnsByName[excelColumnName].Add(columnInfo);
+                typeMapper.ColumnsByName[headerText].Add(columnInfo);
             }
-
+            
             return columnInfo;
         }
 
@@ -165,9 +165,9 @@ namespace Ganss.Excel
         /// Adds a mapping from a excel column index to a data column.
         /// </summary>
         /// <param name="cols">The cols that contains the col to map to.</param>
-        /// <param name="excelColumnIndex">Index of the excel column. min value is 1</param>
+        /// <param name="headerIndex">Index of the excel column. min value is 1</param>
         /// <param name="dataColumnName">Name of the property.</param>
-        public ColumnInfo AddMapping(DataColumnCollection cols, int excelColumnIndex, string dataColumnName)
+        public ColumnInfo AddMapping(DataColumnCollection cols, int headerIndex, string dataColumnName)
         {
             if (TypeMapperFactory == DefaultTypeMapperFactory)
             {
@@ -175,7 +175,7 @@ namespace Ganss.Excel
             }
             TypeMapper typeMapper = TypeMapperFactory.Create(ConverterToDynamic(cols));
             var dataColumn = cols[dataColumnName];
-            var idx = excelColumnIndex - 1;
+            var idx = headerIndex - 1;
 
             if (!typeMapper.ColumnsByIndex.ContainsKey(idx))
                 typeMapper.ColumnsByIndex.Add(idx, new List<ColumnInfo>());
@@ -196,9 +196,9 @@ namespace Ganss.Excel
         /// Adds a mapping from a excel column name to a data column.
         /// </summary>s
         /// <param name="colType">The colType that contains the col to map to.</param>
-        /// <param name="excelColumnName">Name of the column.</param>
+        /// <param name="headerText">Name of the column.</param>
         /// <param name="dataColumnName">Name of the property.</param>
-        public ColumnInfo AddMapping(DbType colType, string excelColumnName, string dataColumnName)
+        public ColumnInfo AddMapping(DbType colType, string headerText, string dataColumnName)
         {
             if (TypeMapperFactory == DefaultTypeMapperFactory)
             {
@@ -206,18 +206,18 @@ namespace Ganss.Excel
             }
             TypeMapper typeMapper = TypeMapperFactory.Create(typeof(ExpandoObject));
 
-            if (dataColumnName != excelColumnName && typeMapper.ColumnsByName.Keys.Any(n => n == dataColumnName))
+            if (dataColumnName != headerText && typeMapper.ColumnsByName.Keys.Any(n => n == dataColumnName))
                 typeMapper.ColumnsByName.Remove(dataColumnName);
 
-            if (!typeMapper.ColumnsByName.Keys.Any(n=>n == excelColumnName))
-                typeMapper.ColumnsByName.Add(excelColumnName, new List<ColumnInfo>());
+            if (!typeMapper.ColumnsByName.Keys.Any(n=>n == headerText))
+                typeMapper.ColumnsByName.Add(headerText, new List<ColumnInfo>());
 
-            var columnInfo = typeMapper.ColumnsByName[excelColumnName].FirstOrDefault(ci => ci.Name == dataColumnName);
+            var columnInfo = typeMapper.ColumnsByName[headerText].FirstOrDefault(ci => ci.Name == dataColumnName);
             if (columnInfo is null)
             {
                 var dataType = NetType2DbTypeMapping.Where(n => n.Value == colType).FirstOrDefault().Key;
                 columnInfo = new DynamicColumnInfo(dataColumnName, dataType.ConvertToNullableType());
-                typeMapper.ColumnsByName[excelColumnName].Add(columnInfo);
+                typeMapper.ColumnsByName[headerText].Add(columnInfo);
             }
 
             return columnInfo;
@@ -227,16 +227,16 @@ namespace Ganss.Excel
         /// Adds a mapping from a excel column index to a data column.
         /// </summary>
         /// <param name="colType">The colType that contains the col to map to.</param>
-        /// <param name="excelColumnIndex">Index of the excel column. min value is 1</param>
+        /// <param name="headerIndex">Index of the excel column. min value is 1</param>
         /// <param name="dataColumnName">Name of the property.</param>
-        public ColumnInfo AddMapping(DbType colType, int excelColumnIndex, string dataColumnName)
+        public ColumnInfo AddMapping(DbType colType, int headerIndex, string dataColumnName)
         {
             if (TypeMapperFactory == DefaultTypeMapperFactory)
             {
                 TypeMapperFactory = new DataColumnMapperFactory();
             }
             TypeMapper typeMapper = TypeMapperFactory.Create(typeof(ExpandoObject));
-            var idx = excelColumnIndex - 1;
+            var idx = headerIndex - 1;
 
             if (!typeMapper.ColumnsByIndex.ContainsKey(idx))
                 typeMapper.ColumnsByIndex.Add(idx, new List<ColumnInfo>());
@@ -268,6 +268,22 @@ namespace Ganss.Excel
             TypeMapper typeMapper = TypeMapperFactory.Create(ConverterToDynamic(cols));
             typeMapper.ColumnsByName.Where(c => c.Value.Any(cc => cc.Name.Equals(dataColumnName, StringComparison.OrdinalIgnoreCase)))
                 .ToList().ForEach(kvp => typeMapper.ColumnsByName.Remove(kvp.Key));
+
+            var col = typeMapper.ColumnsByIndex.FirstOrDefault(c =>
+                c.Value.Any(cc => cc.Name.Equals(dataColumnName, StringComparison.OrdinalIgnoreCase)));
+            if (col.Key != -1)
+            {
+                var afterColumn = typeMapper.ColumnsByIndex.Where(n => n.Key > col.Key).ToDictionary(d => d.Key, d => d.Value);
+                foreach (var index in typeMapper.ColumnsByIndex.Keys.Where(k => k >= col.Key))
+                {
+                    typeMapper.ColumnsByIndex.Remove(index);
+                }
+                //fix index number
+                foreach (var index in afterColumn.Keys)
+                {
+                    typeMapper.ColumnsByIndex.Add(index - 1, afterColumn[index]);
+                }
+            }
         }
 
 

@@ -1105,7 +1105,7 @@ namespace Ganss.Excel.Tests
             });
 
             var productsMapper = new ExcelMapper(file);
-            productsMapper.SkipBlankRows = false;
+            productsMapper.SkipBlankCells = false;
             var productsFetched = productsMapper.Fetch(0, (columnName, value) =>
             {
                 switch (columnName)
@@ -1167,7 +1167,7 @@ namespace Ganss.Excel.Tests
             excelMapper.AddMapping(products.Columns, "order number", "No");
             excelMapper.AddMapping(System.Data.DbType.DateTime, "creation time", "CreationTime");
             excelMapper.AddMapping(System.Data.DbType.Decimal, "price", "Price");
-            excelMapper.AddMapping(products.Columns, "order state value", "State");
+            //excelMapper.AddMapping(products.Columns, "order state value", "State");
             excelMapper.AddMapping(System.Data.DbType.String, "order state text", "State")
                 .SetCellUsing((c, o) =>
                 {
@@ -1220,7 +1220,8 @@ namespace Ganss.Excel.Tests
             productsMapper.AddMapping(System.Data.DbType.String, "order number", "No");
             productsMapper.AddMapping(System.Data.DbType.DateTime, "creation time", "CreationTime");
             productsMapper.AddMapping(System.Data.DbType.Decimal, "price", "Price");
-            productsMapper.AddMapping(System.Data.DbType.Int32, "order state value", "State");
+            //productsMapper.AddMapping(System.Data.DbType.Int32, "order state value", "State");
+            productsMapper.AddMapping(System.Data.DbType.String, "order state text", "StateText");
             productsMapper.AddMapping(System.Data.DbType.Boolean, "is delete", "IsDelete");
             productsMapper.AddMapping(System.Data.DbType.Binary, "version", "RowVersion");
             var productsFetched = productsMapper.FetchToDataTable(0, (columnName, value) =>
@@ -1242,7 +1243,18 @@ namespace Ganss.Excel.Tests
                 Assert.AreEqual(products.Rows[i]["No"], productsFetched.Rows[i]["No"]);
                 Assert.AreEqual(products.Rows[i]["CreationTime"], productsFetched.Rows[i]["CreationTime"]);
                 Assert.AreEqual(products.Rows[i]["Price"], productsFetched.Rows[i]["Price"]);
-                Assert.AreEqual(products.Rows[i]["State"], productsFetched.Rows[i]["State"]);
+                //Assert.AreEqual(products.Rows[i]["State"], productsFetched.Rows[i]["State"]);
+                if (products.Rows[i]["State"] != DBNull.Value)
+                {
+                    Type type = typeof(OrderState);
+                    System.Reflection.MemberInfo member = type.GetMember(((OrderState)products.Rows[i]["State"]).ToString()).FirstOrDefault();
+                    var attr = member.GetCustomAttributes(typeof(System.ComponentModel.DescriptionAttribute), true).FirstOrDefault() as System.ComponentModel.DescriptionAttribute;
+                    Assert.AreEqual(attr.Description, productsFetched.Rows[i]["StateText"]);
+                }
+                else
+                {
+                    Assert.AreEqual(null, productsFetched.Rows[i]["StateText"]);
+                }
                 Assert.AreEqual(products.Rows[i]["IsDelete"], productsFetched.Rows[i]["IsDelete"]);
                 Assert.AreEqual(products.Rows[i]["RowVersion"], productsFetched.Rows[i]["RowVersion"]);
             }
