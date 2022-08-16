@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
+using Ganss.Excel.Exceptions;
 
 namespace Ganss.Excel
 {
@@ -28,9 +29,17 @@ namespace Ganss.Excel
         /// <param name="propertyType">The property type.</param>
         internal void SetPropertyType(Type propertyType)
         {
-            var underlyingType = Nullable.GetUnderlyingType(propertyType);
-            IsNullable = underlyingType != null;
-            PropertyType = underlyingType ?? propertyType;
+            if (propertyType.IsValueType)
+            {
+                var underlyingType = Nullable.GetUnderlyingType(propertyType);
+                IsNullable = underlyingType != null;
+                PropertyType = underlyingType ?? propertyType;
+            }
+            else
+            {
+                IsNullable = true;
+                PropertyType = propertyType;
+            }
 
             isSubType = PropertyType != null
                 && !PropertyType.IsPrimitive
@@ -208,6 +217,19 @@ namespace Ganss.Excel
                 else
                     return (c, o) => c.SetCellValue(Convert.ToDouble(o));
             }
+            else if (PropertyType == typeof(byte[]))
+            {
+                if (IsNullable)
+                    return (c, o) =>
+                    {
+                        if (o == null)
+                            c.SetCellValue((string)null);
+                        else
+                            c.SetCellValue(System.Text.Encoding.UTF8.GetString((byte[])o));
+                    };
+                else
+                    return (c, o) => c.SetCellValue(System.Text.Encoding.UTF8.GetString((byte[])o));
+            }
             else
             {
                 return (c, o) =>
@@ -246,7 +268,15 @@ namespace Ganss.Excel
         public void SetCellStyle(ICell c)
         {
             if (BuiltinFormat != 0 || CustomFormat != null)
+            {
                 c.CellStyle = c.Sheet.GetColumnStyle(c.ColumnIndex);
+                //When it is a dynamic type, after initialization, if the first row is null and the dataformat is not set, the dataformat needs to be repaired again
+                if (c.CellStyle.DataFormat == 0)
+                {
+                    SetColumnStyle(c.Sheet, c.ColumnIndex);
+                    c.CellStyle = c.Sheet.GetColumnStyle(c.ColumnIndex);
+                }
+            }
         }
 
         private object ParseEnum(Type t, string s)
@@ -428,6 +458,12 @@ namespace Ganss.Excel
         internal void ChangeSetterType(Type newType)
         {
             SetPropertyType(newType);
+            if (PropertyType == typeof(DateTime))
+                BuiltinFormat = 0x16; // "m/d/yy h:mm"
+            else
+            {
+                BuiltinFormat = 0;
+            }
             SetCell = GenerateCellSetter();
         }
     }
