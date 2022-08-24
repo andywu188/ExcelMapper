@@ -14,6 +14,9 @@ using System.Runtime.Serialization.Json;
 using System.Text;
 using System.Text.RegularExpressions;
 using NPOI.SS.Formula.Functions;
+using System.Dynamic;
+using System.Data;
+using NPOI.HSSF.UserModel;
 
 namespace Ganss.Excel.Tests
 {
@@ -1262,6 +1265,42 @@ namespace Ganss.Excel.Tests
         }
 
         [Test]
+        public void SaveDataTableDictionaryMappingTest()
+        {
+            var products = new System.Data.DataTable("Order");
+
+            products.Columns.AddRange(new[] {
+                new System.Data.DataColumn("Id", typeof(int)),
+                new System.Data.DataColumn("ProductId", typeof(Guid)),
+                new System.Data.DataColumn("No", typeof(string)),
+                new System.Data.DataColumn("CreationTime", typeof(DateTime)),
+                new System.Data.DataColumn("Price", typeof(decimal)) });
+            var nowTime = DateTime.Now.Date;
+            products.Rows.Add(1, Guid.NewGuid(), "001", nowTime.AddDays(-1), 100.01);
+            products.Rows.Add(2, null, "002", nowTime.AddHours(-1), null);
+            products.Rows.Add(3, Guid.NewGuid(), null, nowTime, 999999);
+
+            var file = "productssave.xlsx";
+            var excelMapper = new ExcelMapper();
+            excelMapper.AddMapping(products.Columns, new Dictionary<string, string>() { { "Id", "id" }, { "ProductId", "product id" }, { "No", "order number" }, { "CreationTime", "creation time" }, { "Price", "price" } });
+            excelMapper.Save(file, products, "Products", true);
+
+            var productsMapper = new ExcelMapper(file);
+            productsMapper.SkipBlankCells = false;
+            productsMapper.AddMapping(products.Columns, new Dictionary<string, string>() { { "Id", "id" }, { "ProductId", "product id" }, { "No", "order number" }, { "CreationTime", "creation time" }, { "Price", "price" } });
+            var productsFetched = productsMapper.Fetch<ExpandoObject>().ToList();
+
+            var dynamicProducts = ExcelMapper.ConverterToDynamic(products);
+            for (int i = 0; i < productsFetched.Count; i++)
+            {
+                Assert.AreEqual(dynamicProducts[i].ProductId == null ? string.Empty : dynamicProducts[i].ProductId.ToString(), ((dynamic)productsFetched[i]).ProductId);
+                Assert.AreEqual(dynamicProducts[i].No ?? string.Empty, ((dynamic)productsFetched[i]).No);
+                Assert.AreEqual(dynamicProducts[i].CreationTime, ((dynamic)productsFetched[i]).CreationTime);
+                Assert.AreEqual(dynamicProducts[i].Price ?? string.Empty, ((dynamic)productsFetched[i]).Price);
+            }
+        }
+
+        [Test]
         public void SaveNoHeaderSaveTest()
         {
             var products = new List<ProductNoHeader>
@@ -1415,6 +1454,56 @@ namespace Ganss.Excel.Tests
             var productsFetched = new ExcelMapper(file).Fetch<GetterSetterProduct>().ToList();
 
             CollectionAssert.AreEqual(products, productsFetched);
+        }
+
+        [Test]
+        public void SetCellUsingTest()
+        {
+            var list = new List<dynamic>();
+            dynamic product1 = new ExpandoObject();
+            product1.Name = "A";
+            product1.Number = null;
+
+            dynamic product2 = new ExpandoObject();
+            product2.Name = "B";
+            product2.Number = 60;
+
+            dynamic product3 = new ExpandoObject();
+            product3.Name = "C";
+            product3.Number = null;
+
+            list.Add(product1);
+            list.Add(product2);
+            list.Add(product3);
+
+            var file = @"savedynamic.xlsx";
+            var mapper = new ExcelMapper() { SkipBlankCells = false };
+            mapper.AddMapping(DbType.String, "Name", "Name");
+            mapper.AddMapping(DbType.Int32, "Number", "Number").SetCellUsing((cell, value) =>
+            {
+                //set cell foreground color to red if value is null
+                if (value == null)
+                {
+                    var wb = cell.Sheet.Workbook;
+                    var cs = wb.CreateCellStyle();
+                    cs.FillPattern = FillPattern.SolidForeground;
+                    cs.FillForegroundColor = NPOI.HSSF.Util.HSSFColor.Red.Index;
+                    cell.CellStyle = cs;
+                }
+                else
+                {
+                    cell.SetCellValue((int)value);
+                }
+            });
+            mapper.Save(file, list);
+
+            using (FileStream fs = File.OpenRead(file))
+            {
+                ISheet sheet = new XSSFWorkbook(fs).GetSheetAt(0);
+                Assert.AreEqual(NPOI.HSSF.Util.HSSFColor.Red.Index, sheet.GetRow(1).GetCell(1).CellStyle.FillForegroundColor);
+                Assert.AreEqual(NPOI.HSSF.Util.HSSFColor.Automatic.Index, sheet.GetRow(2).GetCell(1).CellStyle.FillForegroundColor);
+                Assert.AreEqual(NPOI.HSSF.Util.HSSFColor.Red.Index, sheet.GetRow(3).GetCell(1).CellStyle.FillForegroundColor);
+            }
         }
 
         private class IgnoreProduct

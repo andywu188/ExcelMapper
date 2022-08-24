@@ -255,6 +255,21 @@ namespace Ganss.Excel
         }
 
         /// <summary>
+        /// Adds a mapping from a excel column name to a data column.
+        /// </summary>s
+        /// <param name="cols">The cols that contains the col to map to.</param>
+        /// <param name="columnMapping">columnName and excel header text mapping table, Key is columnName, Value is header text</param>
+        public List<ColumnInfo> AddMapping(DataColumnCollection cols, Dictionary<string, string> columnMapping)
+        {
+            var columnInfoList = new List<ColumnInfo>();
+            foreach (var item in columnMapping)
+            {
+                columnInfoList.Add(this.AddMapping(cols.IndexOf(item.Key) != -1 ? NetType2DbTypeMapping.Where(n => n.Key == cols[item.Key].DataType).FirstOrDefault().Value : DbType.String, item.Value, item.Key));
+            }
+            return columnInfoList;
+        }
+
+        /// <summary>
         /// Ignores a property.
         /// </summary>
         /// <param name="cols">The cols that contains the data column to map to.</param>
