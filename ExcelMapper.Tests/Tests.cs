@@ -14,6 +14,7 @@ using System.Runtime.Serialization.Json;
 using System.Text;
 using System.Text.RegularExpressions;
 using NPOI.SS.Formula.Functions;
+using System.Threading;
 using System.Dynamic;
 using System.Data;
 using NPOI.HSSF.UserModel;
@@ -2958,7 +2959,7 @@ namespace Ganss.Excel.Tests
         {
             public byte[] TextData1 { get; set; }
             public byte[] TextData2 { get; set; }
-            public byte[] RowVerison { get; set; }
+            public byte[] RowVersion { get; set; }
         }
 
         [Test]
@@ -2967,10 +2968,10 @@ namespace Ganss.Excel.Tests
             var excel = new ExcelMapper();
             var datas = new List<BytesData>
             {
-                new BytesData(){TextData1 = Encoding.UTF8.GetBytes("ABC"), TextData2 = Encoding.UTF8.GetBytes("DEF"), RowVerison = new byte[]{1, 0, 0, 0}},
-                new BytesData(){TextData1 = Encoding.UTF8.GetBytes("GHI"), TextData2 =                          null, RowVerison = new byte[]{2, 0, 0, 0}},
-                new BytesData(){TextData1 =                          null, TextData2 = Encoding.UTF8.GetBytes("JKL"), RowVerison = new byte[]{3, 0, 0, 0}},
-                new BytesData(){TextData1 = Encoding.UTF8.GetBytes("MNO"), TextData2 = Encoding.UTF8.GetBytes("PQR"), RowVerison = null}
+                new BytesData(){TextData1 = Encoding.UTF8.GetBytes("ABC"), TextData2 = Encoding.UTF8.GetBytes("DEF"), RowVersion = new byte[]{1, 0, 0, 0}},
+                new BytesData(){TextData1 = Encoding.UTF8.GetBytes("GHI"), TextData2 =                          null, RowVersion = new byte[]{2, 0, 0, 0}},
+                new BytesData(){TextData1 =                          null, TextData2 = Encoding.UTF8.GetBytes("JKL"), RowVersion = new byte[]{3, 0, 0, 0}},
+                new BytesData(){TextData1 = Encoding.UTF8.GetBytes("MNO"), TextData2 = Encoding.UTF8.GetBytes("PQR"), RowVersion = null}
             };
 
             var file = "bytesdata.xlsx";
@@ -2983,7 +2984,7 @@ namespace Ganss.Excel.Tests
                     {
                         case "TextData1":
                             return Encoding.UTF8.GetString(value as byte[]);
-                        case "RowVerison":
+                        case "RowVersion":
                             return BitConverter.ToInt32(value as byte[]);
 
                     }
@@ -2999,7 +3000,7 @@ namespace Ganss.Excel.Tests
                     {
                         case "TextData1":
                             return Encoding.UTF8.GetBytes(value.ToString());
-                        case "RowVerison":
+                        case "RowVersion":
                             return BitConverter.GetBytes(Convert.ToInt32(value.ToString()));
 
                     }
@@ -3011,7 +3012,7 @@ namespace Ganss.Excel.Tests
             {
                 Assert.AreEqual(datas[index].TextData1, productsFetched[index].TextData1);
                 Assert.AreEqual(datas[index].TextData2, productsFetched[index].TextData2);
-                Assert.AreEqual(datas[index].RowVerison, productsFetched[index].RowVerison);
+                Assert.AreEqual(datas[index].RowVersion, productsFetched[index].RowVersion);
             }
         }
 
@@ -3247,6 +3248,46 @@ namespace Ganss.Excel.Tests
             var mapper = new ExcelMapper(@"../../../xlsx/InvalidJson.xlsx");
             Assert.Throws<ExcelMapperConvertException>(() => mapper.Fetch<InvalidJson>().ToList(),
                 @"Unable to convert ""{ ""key"": }"" from [L:1]:[C:0] to System.String.");
+        }
+
+        [Test]
+        public void ParallelTest()
+        {
+            // see #208
+
+            const int numThreads = 16;
+            const int numRuns = 10;
+
+            for (int i = 0; i < numRuns; i++)
+            {
+                var allGo = new ManualResetEvent(false);
+                Exception firstException = null;
+                var failures = 0;
+                var waiting = numThreads;
+                var threads = Enumerable.Range(0, numThreads)
+                    .Take(numThreads)
+                    .Select(m => new Thread(() =>
+                    {
+                        try
+                        {
+                            if (Interlocked.Decrement(ref waiting) == 0) allGo.Set();
+                            var products = new ExcelMapper(@"../../../xlsx/Products.xlsx").Fetch<Product>().ToList();
+    }
+                        catch (Exception ex)
+                        {
+                            Interlocked.CompareExchange(ref firstException, ex, null);
+                            Interlocked.Increment(ref failures);
+}
+                    })).ToList();
+
+                foreach (var thread in threads)
+                    thread.Start();
+                foreach (var thread in threads)
+                    thread.Join();
+
+                Assert.Null(firstException);
+                Assert.AreEqual(0, failures);
+            }
         }
     }
 }

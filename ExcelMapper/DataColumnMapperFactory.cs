@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Dynamic;
@@ -13,7 +14,7 @@ namespace Ganss.Excel
     /// </summary>
     public class DataColumnMapperFactory : ITypeMapperFactory
     {
-        Dictionary<Type, TypeMapper> TypeMappers { get; set; } = new Dictionary<Type, TypeMapper>();
+        ConcurrentDictionary<Type, TypeMapper> TypeMappers { get; set; } = new ConcurrentDictionary<Type, TypeMapper>();
 
         /// <summary>
         /// Creates a <see cref="TypeMapper"/> for the specified type.
@@ -22,11 +23,11 @@ namespace Ganss.Excel
         /// <returns>A <see cref="TypeMapper"/> for the specified type.</returns>
         public TypeMapper Create(Type type)
         {
-            if (!TypeMappers.TryGetValue(type, out TypeMapper typeMapper))
-            {
-                typeMapper = TypeMappers[type] = TypeMapper.Create(type);
-                typeMapper.ColumnsByIndex.Clear();
-            }
+            var typeMapper = TypeMappers.GetOrAdd(type, t => {
+                var newMapper = TypeMapper.Create(t);
+                newMapper.ColumnsByIndex.Clear();
+                return newMapper;
+            });
 
             return typeMapper;
         }
@@ -40,11 +41,11 @@ namespace Ganss.Excel
         {
             if (o is ExpandoObject eo)
             {
-                if (!TypeMappers.TryGetValue(eo.GetType(), out TypeMapper typeMapper))
-                {
-                    typeMapper = TypeMappers[eo.GetType()] = TypeMapper.Create(eo);
-                    typeMapper.ColumnsByIndex.Clear();
-                }
+                var typeMapper = TypeMappers.GetOrAdd(eo.GetType(), t => {
+                    var newMapper = TypeMapper.Create(eo);
+                    newMapper.ColumnsByIndex.Clear();
+                    return newMapper;
+                });
                 
                 return typeMapper;
             }
