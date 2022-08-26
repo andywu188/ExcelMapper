@@ -3,7 +3,7 @@
     <Description>Map POCOs to Excel files. An extension of ExcelMapper that supports mapping of rows to DataTable.</Description>
     <Copyright>Copyright 2015-$([System.DateTime]::Now.Year) Michael Ganss</Copyright>
     <AssemblyTitle>ExcelMapper</AssemblyTitle>
-    <Version>5.2.415.2</Version>
+    <Version>5.2.429.1</Version>
 	<AssemblyVersion>5.0.0.0</AssemblyVersion>
     <Authors>Michael Ganss, Andy Wu</Authors>
     <TargetFrameworks>net461;netstandard2.0</TargetFrameworks>
