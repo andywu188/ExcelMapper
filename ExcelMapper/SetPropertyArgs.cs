@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using NPOI.SS.UserModel;
 
 namespace Ganss.Excel
 {
-
     /// <summary>
     /// set entity property value parameter
     /// </summary>

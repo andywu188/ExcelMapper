@@ -22,6 +22,10 @@ namespace Ganss.Excel
 
         private PropertyInfo property;
         private bool isSubType;
+
+        /// <summary>
+        /// Gets or sets the default cell setter.
+        /// </summary>
         protected Action<ICell, object> defaultCellSetter;
         protected Action<object, ICell, object> customCellSetter;
 
@@ -344,6 +348,16 @@ namespace Ganss.Excel
         /// <summary>Specifies a method to use when setting the cell value from an object.</summary>
         /// <param name="setCell">The method to use when setting the cell value from an object.</param>
         /// <returns>The <see cref="ColumnInfo"/> object.</returns>
+        public ColumnInfo SetCellUsing<TEntity, TValue>(Action<SetCellArgs<TEntity, TValue>> setCell) where TEntity : class
+        {
+            customCellSetter = (entity, cell, value) => setCell(new SetCellArgs<TEntity, TValue>(cell, (TEntity)entity, (TValue)value));
+            return this;
+        }
+
+        /// <summary>Specifies a method to use when setting the cell value from an object.</summary>
+        /// <param name="setCell">The method to use when setting the cell value from an object.</param>
+        /// <returns>The <see cref="ColumnInfo"/> object.</returns>
+        [Obsolete("This method is obsolete. Use SetCellUsing<TEntity>(Action<SetCellArgs<TEntity>>) instead.")]
         public ColumnInfo SetCellUsing(Action<ICell, object> setCell)
         {
             customCellSetter = (entity, cell, value) => setCell(cell, value);
@@ -353,6 +367,7 @@ namespace Ganss.Excel
         /// <summary>Specifies a method to use when setting the cell value from an object.</summary>
         /// <param name="setCell">The method to use when setting the cell value from an object.</param>
         /// <returns>The <see cref="ColumnInfo"/> object.</returns>
+        [Obsolete("This method is obsolete. Use SetCellUsing<TEntity, TValue>(Action<SetCellArgs<TEntity, TValue>>) instead.")]
         public ColumnInfo SetCellUsing<T>(Action<ICell, T> setCell)
         {
             customCellSetter = (entity, cell, value) => setCell(cell, (T)value);
@@ -371,6 +386,7 @@ namespace Ganss.Excel
         /// <summary>Specifies a method to use when setting the property value from the cell value.</summary>
         /// <param name="setProp">The method to use when setting the property value from the cell value.</param>
         /// <returns>The <see cref="ColumnInfo"/> object.</returns>
+        [Obsolete("This method is obsolete. Use SetPropertyUsing<TEntity>(Func<SetPropertyArgs<TEntity>, object>) instead.")]
         public ColumnInfo SetPropertyUsing(Func<object, object> setProp)
         {
             SetProp = (entity, value, cell) => setProp(value);
@@ -380,6 +396,7 @@ namespace Ganss.Excel
         /// <summary>Specifies a method to use when setting the property value from the cell value.</summary>
         /// <param name="setProp">The method to use when setting the property value from the cell value.</param>
         /// <returns>The <see cref="ColumnInfo"/> object.</returns>
+        [Obsolete("This method is obsolete. Use SetPropertyUsing<TEntity>(Func<SetPropertyArgs<TEntity>, object>) instead.")]
         public ColumnInfo SetPropertyUsing(Func<object, ICell, object> setProp)
         {
             SetProp = (entity, value, cell) => setProp(value, cell);
@@ -389,6 +406,7 @@ namespace Ganss.Excel
         /// <summary>Specifies a method to use when setting the property value from the cell value.</summary>
         /// <param name="setProp">The method to use when setting the property value from the cell value.</param>
         /// <returns>The <see cref="ColumnInfo"/> object.</returns>
+        [Obsolete("This method is obsolete. Use SetPropertyUsing<TEntity>(Func<SetPropertyArgs<TEntity>, object>) instead.")]
         public ColumnInfo SetPropertyUsing(Func<object, object, ICell, object> setProp)
         {
             SetProp = setProp;
@@ -398,6 +416,7 @@ namespace Ganss.Excel
         /// <summary>Specifies a method to use when setting the property value from the cell value.</summary>
         /// <param name="setProp">The method to use when setting the property value from the cell value.</param>
         /// <returns>The <see cref="ColumnInfo"/> object.</returns>
+        [Obsolete("This method is obsolete. Use SetPropertyUsing<TEntity>(Func<SetPropertyArgs<TEntity>, object>) instead.")]
         public ColumnInfo SetPropertyUsing<T>(Func<T, object, object> setProp)
         {
             SetProp = (entity, value, cell) => setProp((T)entity, value);
@@ -407,6 +426,7 @@ namespace Ganss.Excel
         /// <summary>Specifies a method to use when setting the property value from the cell value.</summary>
         /// <param name="setProp">The method to use when setting the property value from the cell value.</param>
         /// <returns>The <see cref="ColumnInfo"/> object.</returns>
+        [Obsolete("This method is obsolete. Use SetPropertyUsing<TEntity>(Func<SetPropertyArgs<TEntity>, object>) instead.")]
         public ColumnInfo SetPropertyUsing<T>(Func<T, object, ICell, object> setProp)
         {
             SetProp = (entity, value, cell) => setProp((T)entity, value, cell);

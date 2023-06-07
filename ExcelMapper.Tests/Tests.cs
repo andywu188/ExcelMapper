@@ -1405,7 +1405,11 @@ namespace Ganss.Excel.Tests
         {
             var excel = new ExcelMapper(@"../../../xlsx/ProductsConvert.xlsx") { TrackObjects = true };
 
-            excel.AddMapping<GetterSetterProduct>("Name", p => p.Name);
+            excel.AddMapping<GetterSetterProduct>("Name", p => p.Name)
+                .SetPropertyUsing<GetterSetterProduct>((entity, value, cell) =>
+                {
+                    return value;
+                });
             excel.AddMapping<GetterSetterProduct>("Name", p => p.RedName)
                 .FromExcelOnly()
                 .SetPropertyUsing((v, c) =>
@@ -1447,13 +1451,23 @@ namespace Ganss.Excel.Tests
                 });
 
             excel.AddMapping<GetterSetterProduct>("Number", p => p.Number)
-                .SetCellUsing<GetterSetterProduct>((args) =>
+                .SetCellUsing<GetterSetterProduct, int>((args) =>
                 {
-                    args.Cell.SetCellValue((int)args.Value);
+                    args.Cell.SetCellValue(args.Value);
                 })
                 .SetPropertyUsing<GetterSetterProduct>((args) =>
                 {
                     return Convert.ToInt32(args.Value);
+                });
+
+            excel.AddMapping<GetterSetterProduct>("Price", p => p.Price)
+                .SetCellUsing<double>((cell, value) =>
+                {
+                    cell.SetCellValue(value);
+                })
+                .SetPropertyUsing<GetterSetterProduct>((entity, value) =>
+                {
+                    return Convert.ToDouble(value);
                 });
 
             excel.AddMapping<GetterSetterProduct>("Value", p => p.Value)
@@ -1463,7 +1477,12 @@ namespace Ganss.Excel.Tests
                 })
                 .SetPropertyUsing<GetterSetterProduct>((args) =>
                 {
-                    return args.Data.Number * args.Data.Price;
+                    var value = 0.0;
+                    if(args.Cell.CellType == CellType.Formula)
+                    {
+                        value =  args.Data.Number * args.Data.Price;
+                    }
+                    return value;
                 });
 
             var products = excel.Fetch<GetterSetterProduct>().ToList();
@@ -3295,12 +3314,12 @@ namespace Ganss.Excel.Tests
                         {
                             if (Interlocked.Decrement(ref waiting) == 0) allGo.Set();
                             var products = new ExcelMapper(@"../../../xlsx/Products.xlsx").Fetch<Product>().ToList();
-    }
+                        }
                         catch (Exception ex)
                         {
                             Interlocked.CompareExchange(ref firstException, ex, null);
                             Interlocked.Increment(ref failures);
-}
+                        }
                     })).ToList();
 
                 foreach (var thread in threads)

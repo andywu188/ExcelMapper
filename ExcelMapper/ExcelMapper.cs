@@ -1028,7 +1028,7 @@ namespace Ganss.Excel
 
             Saving?.Invoke(this, new SavingEventArgs(sheet));
 
-            Workbook.Write(stream);
+            Workbook.Write(stream, true);
         }
 
         void Save<T>(Stream stream, ISheet sheet, IEnumerable<T> objects, Func<string, object, object> valueConverter = null)
@@ -1073,7 +1073,7 @@ namespace Ganss.Excel
 
             Saving?.Invoke(this, new SavingEventArgs(sheet));
 
-            Workbook.Write(stream);
+            Workbook.Write(stream, true);
         }
 
         private void SetCells(TypeMapper typeMapper,
