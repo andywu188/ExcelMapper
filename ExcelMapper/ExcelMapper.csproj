@@ -1,12 +1,12 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <Description>Map POCOs to Excel files. An extension of ExcelMapper that supports mapping of rows to DataTable.</Description>
     <Copyright>Copyright 2015-$([System.DateTime]::Now.Year) Michael Ganss</Copyright>
     <AssemblyTitle>ExcelMapper</AssemblyTitle>
-    <Version>5.2.483.1</Version>
+    <Version>5.2.581.1</Version>
 	<AssemblyVersion>5.0.0.0</AssemblyVersion>
     <Authors>Michael Ganss, Andy Wu</Authors>
-    <TargetFrameworks>net472;net481;net6.0;net7.0;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>net461;net472;net481;net6.0;net7.0;netstandard2.0</TargetFrameworks>
     <AssemblyName>ExcelMapper</AssemblyName>
     <PackageId>ExcelMapper.DataTableExtension</PackageId>
     <PackageTags>npoi;mapper;excel;xls;xlsx;map;mapping;poco;orm;linq;object mapping;dynamic;datatable</PackageTags>
@@ -38,10 +38,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-	  <PackageReference Include="Microsoft.CSharp" Version="4.7.0" Condition="'$(TargetFramework)' == 'netstandard2.0' or '$(TargetFramework)' == 'net472' or '$(TargetFramework)' == 'net481'" />
+	  <PackageReference Include="Microsoft.CSharp" Version="4.7.0" Condition="'$(TargetFrameworkIdentifier)' == '.NETStandard' or '$(TargetFrameworkIdentifier)' == '.NETFramework'" />
     <PackageReference Include="NPOI" Version="2.7.0" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
-    <PackageReference Include="System.Text.Json" Version="8.0.0" />
+    <PackageReference Include="System.Text.Json" Version="8.0.3" />
   </ItemGroup>
   <ItemGroup>
     <None Include="../README.md" Pack="true" PackagePath="" />

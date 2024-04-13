@@ -1180,13 +1180,13 @@ namespace Ganss.Excel.Tests
             var dynamicProducts = ExcelMapper.ConverterToDynamic(products);
             for (int i = 0; i < productsFetched.Count; i++)
             {
-                Assert.AreEqual(dynamicProducts[i].ProductId, productsFetched[i].ProductId);
-                Assert.AreEqual(dynamicProducts[i].No ?? string.Empty, productsFetched[i].No);
-                Assert.AreEqual(dynamicProducts[i].CreationTime, productsFetched[i].CreationTime);
-                Assert.AreEqual(dynamicProducts[i].Price ?? string.Empty, productsFetched[i].Price);
-                Assert.AreEqual(dynamicProducts[i].State, productsFetched[i].State);
-                Assert.AreEqual(dynamicProducts[i].IsDelete ?? string.Empty, productsFetched[i].IsDelete);
-                Assert.AreEqual(dynamicProducts[i].RowVersion, productsFetched[i].RowVersion);
+                Assert.That(dynamicProducts[i].ProductId, Is.EqualTo(productsFetched[i].ProductId));
+                Assert.That(dynamicProducts[i].No ?? string.Empty, Is.EqualTo(productsFetched[i].No));
+                Assert.That(dynamicProducts[i].CreationTime, Is.EqualTo(productsFetched[i].CreationTime));
+                Assert.That(dynamicProducts[i].Price ?? string.Empty, Is.EqualTo(productsFetched[i].Price));
+                Assert.That(dynamicProducts[i].State, Is.EqualTo(productsFetched[i].State));
+                Assert.That(dynamicProducts[i].IsDelete ?? string.Empty, Is.EqualTo(productsFetched[i].IsDelete));
+                Assert.That(dynamicProducts[i].RowVersion, Is.EqualTo(productsFetched[i].RowVersion));
             }
         }
 
@@ -1297,24 +1297,24 @@ namespace Ganss.Excel.Tests
 
             for (int i = 0; i < productsFetched.Rows.Count; i++)
             {
-                Assert.AreEqual(products.Rows[i]["ProductId"], productsFetched.Rows[i]["ProductId"]);
-                Assert.AreEqual(products.Rows[i]["No"], productsFetched.Rows[i]["No"]);
-                Assert.AreEqual(products.Rows[i]["CreationTime"], productsFetched.Rows[i]["CreationTime"]);
-                Assert.AreEqual(products.Rows[i]["Price"], productsFetched.Rows[i]["Price"]);
-                //Assert.AreEqual(products.Rows[i]["State"], productsFetched.Rows[i]["State"]);
+                Assert.That(products.Rows[i]["ProductId"], Is.EqualTo(productsFetched.Rows[i]["ProductId"]));
+                Assert.That(products.Rows[i]["No"], Is.EqualTo(productsFetched.Rows[i]["No"]));
+                Assert.That(products.Rows[i]["CreationTime"], Is.EqualTo(productsFetched.Rows[i]["CreationTime"]));
+                Assert.That(products.Rows[i]["Price"], Is.EqualTo(productsFetched.Rows[i]["Price"]));
+                //Assert.Equals(products.Rows[i]["State"], productsFetched.Rows[i]["State"]);
                 if (products.Rows[i]["State"] != DBNull.Value)
                 {
                     Type type = typeof(OrderState);
                     System.Reflection.MemberInfo member = type.GetMember(((OrderState)products.Rows[i]["State"]).ToString()).FirstOrDefault();
                     var attr = member.GetCustomAttributes(typeof(System.ComponentModel.DescriptionAttribute), true).FirstOrDefault() as System.ComponentModel.DescriptionAttribute;
-                    Assert.AreEqual(attr.Description, productsFetched.Rows[i]["StateText"]);
+                    Assert.That(attr.Description, Is.EqualTo(productsFetched.Rows[i]["StateText"]));
                 }
                 else
                 {
-                    Assert.AreEqual(null, productsFetched.Rows[i]["StateText"]);
+                    Assert.That(productsFetched.Rows[i]["StateText"], Is.Null);
                 }
-                Assert.AreEqual(products.Rows[i]["IsDelete"], productsFetched.Rows[i]["IsDelete"]);
-                Assert.AreEqual(products.Rows[i]["RowVersion"], productsFetched.Rows[i]["RowVersion"]);
+                Assert.That(products.Rows[i]["IsDelete"], Is.EqualTo(productsFetched.Rows[i]["IsDelete"]));
+                Assert.That(products.Rows[i]["RowVersion"], Is.EqualTo(productsFetched.Rows[i]["RowVersion"]));
             }
         }
 
@@ -1347,10 +1347,10 @@ namespace Ganss.Excel.Tests
             var dynamicProducts = ExcelMapper.ConverterToDynamic(products);
             for (int i = 0; i < productsFetched.Count; i++)
             {
-                Assert.AreEqual(dynamicProducts[i].ProductId == null ? string.Empty : dynamicProducts[i].ProductId.ToString(), ((dynamic)productsFetched[i]).ProductId);
-                Assert.AreEqual(dynamicProducts[i].No ?? string.Empty, ((dynamic)productsFetched[i]).No);
-                Assert.AreEqual(dynamicProducts[i].CreationTime, ((dynamic)productsFetched[i]).CreationTime);
-                Assert.AreEqual(dynamicProducts[i].Price ?? string.Empty, ((dynamic)productsFetched[i]).Price);
+                Assert.That(dynamicProducts[i].ProductId == null ? string.Empty : dynamicProducts[i].ProductId.ToString(), Is.EqualTo(((dynamic)productsFetched[i]).ProductId));
+                Assert.That(dynamicProducts[i].No ?? string.Empty, Is.EqualTo(((dynamic)productsFetched[i]).No));
+                Assert.That(dynamicProducts[i].CreationTime, Is.EqualTo(((dynamic)productsFetched[i]).CreationTime));
+                Assert.That(dynamicProducts[i].Price ?? string.Empty, Is.EqualTo(((dynamic)productsFetched[i]).Price));
             }
         }
 
@@ -1596,9 +1596,9 @@ namespace Ganss.Excel.Tests
             using (FileStream fs = File.OpenRead(file))
             {
                 ISheet sheet = new XSSFWorkbook(fs).GetSheetAt(0);
-                Assert.AreEqual(NPOI.HSSF.Util.HSSFColor.Red.Index, sheet.GetRow(1).GetCell(1).CellStyle.FillForegroundColor);
-                Assert.AreEqual(NPOI.HSSF.Util.HSSFColor.Automatic.Index, sheet.GetRow(2).GetCell(1).CellStyle.FillForegroundColor);
-                Assert.AreEqual(NPOI.HSSF.Util.HSSFColor.Red.Index, sheet.GetRow(3).GetCell(1).CellStyle.FillForegroundColor);
+                Assert.That(NPOI.HSSF.Util.HSSFColor.Red.Index, Is.EqualTo(sheet.GetRow(1).GetCell(1).CellStyle.FillForegroundColor));
+                Assert.That(NPOI.HSSF.Util.HSSFColor.Automatic.Index, Is.EqualTo(sheet.GetRow(2).GetCell(1).CellStyle.FillForegroundColor));
+                Assert.That(NPOI.HSSF.Util.HSSFColor.Red.Index, Is.EqualTo(sheet.GetRow(3).GetCell(1).CellStyle.FillForegroundColor));
             }
         }
 
